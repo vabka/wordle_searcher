@@ -7,7 +7,7 @@ use std::{fs::File, path::Path};
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let args: Vec<String> = std::env::args().collect();
-    let path = &args[0];
+    let path = &args[1];
     // let path = r"C:\Users\Vabka\Downloads\russian_nouns_v2.0\russian_nouns.txt";
 
     let corpus = read_all_lines_lowercase_with_exact_length(path, 5)?;
