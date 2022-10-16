@@ -6,9 +6,10 @@ use std::{
 use std::{fs::File, path::Path};
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    // let args: Vec<String> = std::env::args().collect();
-    // let path = &args[0];
-    let path = r"C:\Users\Vabka\Downloads\russian_nouns_v2.0\russian_nouns.txt";
+    let args: Vec<String> = std::env::args().collect();
+    let path = &args[0];
+    // let path = r"C:\Users\Vabka\Downloads\russian_nouns_v2.0\russian_nouns.txt";
+
     let corpus = read_all_lines_lowercase_with_exact_length(path, 5)?;
     let mut game = WordleGame::new(corpus, 6, 5);
     loop {
@@ -33,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         }
         println!("Всего {}", count);
         if count <= 1 {
-            println!("Больше подсказать не могу. Возможно решено за {}", game.performed_guesses + 1);
+            println!("Больше подсказать не могу. Возможно решено за {}", game.performed_guesses);
             break;
         }       
         println!("================================");
