@@ -41,5 +41,8 @@ $ ./wordle_searcher.exe ./russian_nouns.txt
 Всего 1
 Больше подсказать не могу. Возможно решено за 2
 ```
+![image](https://user-images.githubusercontent.com/17644379/196061088-3b06d129-9dec-43bc-a0fb-2ec3f0973830.png)
 
 Для русского языка могу рекомендовать https://github.com/Harrix/Russian-Nouns
+
+TODO: Реализовать алгоритм рекомендации слов с наибольшей энтропией, как показано в [3Blue1Brown - Solving Wordle using information theory](https://www.youtube.com/watch?v=v68zYyaEmEA)
