@@ -1,45 +1,48 @@
-use std::fmt::Display;
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+};
 
-pub struct WordleGame {
-    lines: Vec<WordleLine>,
-    word_length: usize,
+pub struct WordleGame<const WORD_LENGTH: usize, const ATTEMPTS: usize> {
+    lines: Vec<WordleLine<WORD_LENGTH>>,
     performed_guesses: usize,
-    attempts: usize,
     corpus: Vec<String>,
     corpus_exclude: Vec<String>,
-    hard_mode: bool,
+    //hard_mode: bool,
 }
 
-impl WordleGame {
-    pub fn new(corpus: Vec<String>, attempts: usize, word_length: usize) -> Self {
+impl<const WORD_LENGTH: usize, const ATTEMPTS: usize> WordleGame<WORD_LENGTH, ATTEMPTS> {
+    pub fn new(corpus: Vec<String>) -> Self {
         Self {
             corpus,
-            lines: Vec::with_capacity(attempts),
-            word_length: word_length,
+            lines: Vec::with_capacity(ATTEMPTS),
             performed_guesses: 0,
-            attempts,
             corpus_exclude: vec![],
-            hard_mode: false,
+            // hard_mode: false,
         }
     }
 
-    pub fn iter_corpus<'game>(&'game self) -> CorpusIterator<'game> {
+    pub fn iter_corpus<'game>(&'game self) -> CorpusIterator<'game, WORD_LENGTH, ATTEMPTS> {
         CorpusIterator::new(self)
     }
 
-    pub fn add_guess(&mut self, guess: WordleLine) -> Result<(), AddGuessError> {
-        if self.performed_guesses == self.attempts {
+    pub fn add_guess(
+        &mut self,
+        guess: WordleLine<WORD_LENGTH>,
+    ) -> Result<(), AddGuessError<WORD_LENGTH>> {
+        if self.performed_guesses == ATTEMPTS {
             Err(AddGuessError {
                 guess,
                 error: AddGuessErrorVariant::NoMoreAttempts {
-                    total_attempts: self.attempts,
+                    total_attempts: ATTEMPTS,
                 },
             })
-        } else if guess.len() != self.word_length {
+        } else if guess.len() != WORD_LENGTH {
             Err(AddGuessError {
                 guess,
                 error: AddGuessErrorVariant::WordLength {
-                    expected_length: self.word_length,
+                    expected_length: WORD_LENGTH,
                 },
             })
         } else {
@@ -49,6 +52,31 @@ impl WordleGame {
         }
     }
 
+    pub fn find_best_next_guess(&self) -> Vec<&str> {
+        self.iter_corpus().take(10).collect()
+    }
+
+    pub fn get_frequencies(&self) -> (usize, HashMap<char, Frequencies<WORD_LENGTH>>) {
+        let mut entropy = HashMap::with_capacity(50);
+        let mut total = 0;
+        for word in self.iter_corpus() {
+            for (i, character) in word.chars().take(WORD_LENGTH).enumerate() {
+                let entry: &mut Frequencies<WORD_LENGTH> = entropy.entry(character).or_default();
+                entry.positions[i] += 1;
+            }
+            total += 1;
+        }
+        (total, entropy)
+    }
+
+    // fn calcualte_entropy(count: usize, frequencies: HashMap<char, Frequencies<WORD_LENGTH>>){        
+    //     for (character, frequencies) in frequencies.iter() {
+    //         let mut exact = [0f32; WORD_LENGTH];
+    //         let mut another = [0f32; WORD_LENGTH];
+    //         let mut miss = 0f32;
+    //     }
+    // }
+
     pub fn is_excluded(&self, word: &str) -> bool {
         self.corpus_exclude.iter().any(|w| w == word)
     }
@@ -56,12 +84,12 @@ impl WordleGame {
     pub fn exclude(&mut self, word: String) -> Result<(), ExcludeWordError> {
         if self.is_excluded(&word) {
             Err(ExcludeWordError::AlreadyExcluded)
-        } else if self.word_length == word.len() {
+        } else if WORD_LENGTH == word.len() {
             self.corpus_exclude.push(word);
             Ok(())
         } else {
             Err(ExcludeWordError::InvalidLength {
-                expected_length: self.word_length,
+                expected_length: WORD_LENGTH,
             })
         }
     }
@@ -71,13 +99,39 @@ impl WordleGame {
     }
 }
 
-pub struct CorpusIterator<'game> {
-    game: &'game WordleGame,
+pub struct Frequencies<const WORD_LENGTH: usize> {
+    positions: [usize; WORD_LENGTH],
+}
+
+pub struct Probability<
+    const WORD_LENGTH: usize,
+    P: Add + AddAssign + Sub + SubAssign + Div + DivAssign + Mul + MulAssign + Sized + From<usize> + Copy,
+> {
+    exact: [P; WORD_LENGTH],
+    except: [P; WORD_LENGTH],
+    omitted: P,
+}
+
+impl<const WORD_LENGTH: usize> Frequencies<WORD_LENGTH> {
+    pub fn positions(&self) -> &[usize] {
+        &self.positions
+    }
+}
+
+impl<const WORD_LENGTH: usize> Default for Frequencies<WORD_LENGTH> {
+    fn default() -> Self {
+        Self {
+            positions: [0; WORD_LENGTH],
+        }
+    }
+}
+pub struct CorpusIterator<'game, const WL: usize, const A: usize> {
+    game: &'game WordleGame<WL, A>,
     pos: usize,
 }
 
-impl<'game> CorpusIterator<'game> {
-    pub fn new(game: &'game WordleGame) -> Self {
+impl<'game, const WL: usize, const A: usize> CorpusIterator<'game, WL, A> {
+    pub fn new(game: &'game WordleGame<WL, A>) -> Self {
         Self { game, pos: 0 }
     }
 }
@@ -86,7 +140,9 @@ pub enum ExcludeWordError {
     InvalidLength { expected_length: usize },
     AlreadyExcluded,
 }
-impl<'game> Iterator for CorpusIterator<'game> {
+impl<'game, const WORD_LENGTH: usize, const ATTEMPTS: usize> Iterator
+    for CorpusIterator<'game, WORD_LENGTH, ATTEMPTS>
+{
     type Item = &'game str;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -116,12 +172,12 @@ impl<'game> Iterator for CorpusIterator<'game> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct AddGuessError {
-    pub guess: WordleLine,
+pub struct AddGuessError<const WL: usize> {
+    pub guess: WordleLine<WL>,
     pub error: AddGuessErrorVariant,
 }
 
-impl Display for AddGuessError {
+impl<const WORD_LENGTH: usize> Display for AddGuessError<WORD_LENGTH> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.error {
             AddGuessErrorVariant::WordLength { expected_length: _ } => {
@@ -140,11 +196,11 @@ pub enum AddGuessErrorVariant {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct WordleLine {
-    pub chars: Vec<(char, WordleCharStatus)>,
+pub struct WordleLine<const WORD_LENGTH: usize> {
+    pub chars: [(char, WordleCharStatus); WORD_LENGTH],
 }
 
-impl WordleLine {
+impl<const WL: usize> WordleLine<WL> {
     pub fn len(&self) -> usize {
         self.chars.len()
     }
@@ -191,12 +247,12 @@ impl WordleLine {
         true
     }
 
-    pub fn new(letters: Vec<(char, WordleCharStatus)>) -> WordleLine {
+    pub fn new(letters: [(char, WordleCharStatus); WL]) -> WordleLine<WL> {
         WordleLine { chars: letters }
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum WordleCharStatus {
     Inexistent,
     Existing,
@@ -216,9 +272,9 @@ mod tets {
             "abc".to_string(),
             "cba".to_string(),
         ];
-        let mut game = WordleGame::new(corpus, 6, 3);
+        let mut game: WordleGame<3, 6> = WordleGame::new(corpus);
         let guess = WordleLine {
-            chars: vec![
+            chars: [
                 ('a', WordleCharStatus::Existing),
                 ('b', WordleCharStatus::Good),
                 ('c', WordleCharStatus::Existing),
@@ -230,5 +286,22 @@ mod tets {
         let filtered_corpus: Vec<&str> = game.iter_corpus().collect();
 
         assert_eq!(vec!["cba"], filtered_corpus);
+    }
+
+    #[test]
+    fn vocabulary() {
+        let corpus = vec![
+            "aaa".to_string(),
+            "bbb".to_string(),
+            "ccc".to_string(),
+            "abc".to_string(),
+            "cba".to_string(),
+        ];
+        let game: WordleGame<3, 6> = WordleGame::new(corpus);
+        let (count, map) = game.get_frequencies();
+        assert_eq!(count, 5);
+        assert_eq!(map[&'a'].positions(), [2, 1, 2]);
+        assert_eq!(map[&'b'].positions(), [1, 3, 1]);
+        assert_eq!(map[&'c'].positions(), [2, 1, 2]);
     }
 }

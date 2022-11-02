@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let path = r"C:\Users\Vabka\Downloads\russian_nouns_v2.0\russian_nouns.txt";
 
     let corpus = read_all_lines_lowercase_with_exact_length(path, 5)?;
-    let mut game = WordleGame::new(corpus, 6, 5);
+    let mut game: WordleGame<5, 6> = WordleGame::new(corpus);
     loop {
         let guess = get_guess()?;
         if let Err(e) = game.add_guess(guess) {
@@ -32,19 +32,22 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
         println!("Возможные варианты:");
         for word in game.iter_corpus() {
             println!("{}", word);
-            count +=1;
+            count += 1;
         }
         println!("Всего {}", count);
         if count <= 1 {
-            println!("Больше подсказать не могу. Возможно решено за {}", game.performed_guesses());
+            println!(
+                "Больше подсказать не могу. Возможно решено за {}",
+                game.performed_guesses()
+            );
             break;
-        }       
+        }
         println!("================================");
     }
     Ok(())
 }
 
-fn get_guess() -> Result<WordleLine, GuessError> {
+fn get_guess<const WORD_LENGTH: usize>() -> Result<WordleLine<WORD_LENGTH>, GuessError> {
     println!("Введённое слово: ");
     let mut word = String::with_capacity(12);
     io::stdin().read_line(&mut word)?;
@@ -58,22 +61,25 @@ fn get_guess() -> Result<WordleLine, GuessError> {
     let word_chars = trimmed_word.chars();
     let mask_chars = trimmed_mask.chars();
     if word_chars.count() == mask_chars.count() {
-        let letters = trimmed_word
-            .chars()
-            .zip(trimmed_mask.chars())
-            .filter_map(|(ch, mask_ch)| {
-                if mask_ch == '*' {
-                    Some((ch, WordleCharStatus::Inexistent))
-                } else if mask_ch == '?' {
-                    Some((ch, WordleCharStatus::Existing))
-                } else if mask_ch == ch {
-                    Some((ch, WordleCharStatus::Good))
-                } else {
-                    None
-                }
-            })
-            .collect();
-        Ok(WordleLine::new(letters))
+        let mut vec = Vec::with_capacity(WORD_LENGTH);
+        vec.extend(
+            trimmed_word
+                .chars()
+                .zip(trimmed_mask.chars())
+                .filter_map(|(ch, mask_ch)| {
+                    if mask_ch == '*' {
+                        Some((ch, WordleCharStatus::Inexistent))
+                    } else if mask_ch == '?' {
+                        Some((ch, WordleCharStatus::Existing))
+                    } else if mask_ch == ch {
+                        Some((ch, WordleCharStatus::Good))
+                    } else {
+                        None
+                    }
+                }),
+        );
+
+        Ok(WordleLine::new(vec.to_fixed_sized_array().unwrap()))
     } else {
         Err(GuessError::WordMaskLength)
     }
@@ -115,4 +121,22 @@ fn read_all_lines_lowercase_with_exact_length(
         }
     }
     Ok(corpus)
+}
+
+trait ToFixedSizedArray {
+    type Item;
+    type Error;
+    fn to_fixed_sized_array<const SIZE: usize>(self) -> Result<[Self::Item; SIZE], Self::Error>;
+}
+
+impl<T: Copy> ToFixedSizedArray for Vec<T> {
+    type Item = T;
+    type Error = Self;
+    fn to_fixed_sized_array<const SIZE: usize>(self) -> Result<[Self::Item; SIZE], Self::Error> {
+        if self.capacity() == SIZE {
+            Ok(unsafe { *self.as_ptr().cast() })
+        } else {
+            Err(self)
+        }
+    }
 }
