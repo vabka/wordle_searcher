@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fmt::Display,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
+    // ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign},
 };
 
 pub struct WordleGame<const WORD_LENGTH: usize, const ATTEMPTS: usize> {
@@ -103,14 +103,14 @@ pub struct Frequencies<const WORD_LENGTH: usize> {
     positions: [usize; WORD_LENGTH],
 }
 
-pub struct Probability<
-    const WORD_LENGTH: usize,
-    P: Add + AddAssign + Sub + SubAssign + Div + DivAssign + Mul + MulAssign + Sized + From<usize> + Copy,
-> {
-    exact: [P; WORD_LENGTH],
-    except: [P; WORD_LENGTH],
-    omitted: P,
-}
+// pub struct Probability<
+//     const WORD_LENGTH: usize,
+//     P: Add + AddAssign + Sub + SubAssign + Div + DivAssign + Mul + MulAssign + Sized + From<usize> + Copy,
+// > {
+//     exact: [P; WORD_LENGTH],
+//     except: [P; WORD_LENGTH],
+//     omitted: P,
+// }
 
 impl<const WORD_LENGTH: usize> Frequencies<WORD_LENGTH> {
     pub fn positions(&self) -> &[usize] {

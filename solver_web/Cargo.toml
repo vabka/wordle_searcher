@@ -1,0 +1,21 @@
+[package]
+name = "solver_web"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+yew = "0.19.3"
+web-sys = "0.3.60"
+serde = "1.0.147"
+serde_json = "1.0.87"
+serde_derive = "1.0.147"
+gloo-net = "0.2.4"
+wasm-bindgen-futures = "0.4.33"
+futures = "0.3.25"
+gloo-console = "0.2.3"
+
+[dependencies.wordle_searcher]
+path = "../solver"
+version = "0.1.0"
