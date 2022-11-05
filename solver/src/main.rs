@@ -5,7 +5,7 @@ use std::{
 };
 use std::{fs::File, path::Path};
 
-use wordle_searcher::*;
+use wordle_searcher::solvers::fixed_size_wordle_solver::*;
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     //let args: Vec<String> = std::env::args().collect();
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let path = r"C:\Users\Vabka\Downloads\russian_nouns_v2.0\russian_nouns.txt";
 
     let corpus = read_all_lines_lowercase_with_exact_length(path, 5)?;
-    let mut game: WordleGame<5, 6> = WordleGame::new(corpus);
+    let mut game: NaiveSolver<5> = NaiveSolver::new(corpus);
     loop {
         let guess = get_guess()?;
         if let Err(e) = game.add_guess(guess) {
